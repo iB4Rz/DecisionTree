@@ -21,11 +21,15 @@ instance Show DecisionTree where
     show (Leaf attValue) = show(attValue)
     show (Node attName childs) = indent 0 attName ++ "\n" ++ showChilds childs 0 attName
         where
-            showChilds [] lvl father = ""
-            showChilds ((attValue,Null) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++ "\n " ++ indent (lvl+1) "null" ++ "\n" ++ showChilds xs lvl father
-            showChilds ((attValue,(Leaf attName)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++  "\n " ++ indent (lvl+1) (extend "edibility" attName attributeList) ++ "\n" ++ showChilds xs lvl father
-            showChilds ((attValue,(Node attName childs)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++ "\n" ++ indent (lvl+2) attName ++ "\n" ++ (showChilds childs (lvl+2) attName) ++ (showChilds xs lvl father)
             indent n = (replicate n ' ' ++)
+            showChilds [] lvl father = ""
+            showChilds ((attValue,Null) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) 
+                                    ++ "\n " ++ indent (lvl+1) "null" ++ "\n" ++ showChilds xs lvl father
+            showChilds ((attValue,(Leaf attName)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) 
+                                    ++  "\n " ++ indent (lvl+1) (extend "edibility" attName attributeList) ++ "\n" ++ showChilds xs lvl father
+            showChilds ((attValue,(Node attName childs)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) 
+                                    ++ "\n" ++ indent (lvl+2) attName ++ "\n" ++ (showChilds childs (lvl+2) attName) ++ (showChilds xs lvl father)
+            
 
 -- Fractional attribute list useful for console interaction with the resulting tree and the dialogue interaction
 attributeList :: AttList
