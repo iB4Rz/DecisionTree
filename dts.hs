@@ -2,8 +2,8 @@
 -- REPRESENTATION -- 
 --------------------
 
-type AttName = String                                   -- attribute name
-type AttValue = String                                  -- attribute value (details)
+type AttName = String                                   -- attribute name (example: odor, cap-color ...)
+type AttValue = String                                  -- attribute value (example: yellow, fishy ...)
 type Values = [AttValue]                                -- values of an attribute or a data row    
 type Attribute = (AttName, Values)                      -- attribute information                         
 type Attributes = [Attribute]                           -- attribute list 
@@ -14,7 +14,18 @@ type AttList = [(AttName, [(AttValue, String)])]        -- attribute list with t
 
 -- Decision Tree
 data DecisionTree = Null | Leaf AttValue | Node AttName [(AttValue, DecisionTree)] 
-   deriving (Eq)
+
+-- Decision tree viewer
+instance Show DecisionTree where
+    show Null = "null"
+    show (Leaf attValue) = show(attValue)
+    show (Node attName childs) = indent 0 attName ++ "\n" ++ showChilds childs 0 attName
+        where
+            showChilds [] lvl father = ""
+            showChilds ((attValue,Null) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++ "\n " ++ indent (lvl+1) "null" ++ "\n" ++ showChilds xs lvl father
+            showChilds ((attValue,(Leaf attName)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++  "\n " ++ indent (lvl+1) (extend "edibility" attName attributeList) ++ "\n" ++ showChilds xs lvl father
+            showChilds ((attValue,(Node attName childs)) : xs) lvl father = indent (lvl+1) (extend father attValue attributeList) ++ "\n" ++ indent (lvl+2) attName ++ "\n" ++ (showChilds childs (lvl+2) attName) ++ (showChilds xs lvl father)
+            indent n = (replicate n ' ' ++)
 
 -- Fractional attribute list useful for console interaction with the resulting tree and the dialogue interaction
 attributeList :: AttList
@@ -253,6 +264,13 @@ nextAtt mushData@(attributes, _) classAtt@(classAttName, _) = getValue (maximum 
     where 
         gains = [ (gain mushData att classAtt, att) | att <- (remove classAttName attributes) ]
 
+-- Given the name of an attribute and its value (data form) returns its value in extend form                                        
+extend :: AttName -> AttValue -> AttList -> String
+extend attName attValue list = getValue attValue (getValue attName list)
+                                     
+-- Given the name of an attribute and its value in extend form returns its value in data form 
+extend' :: AttName -> String -> AttList -> AttValue
+extend' attName value list = getValue' value (getValue attName list)
 
 -- Function that traverses the decision tree from dialogues and gives you a prediction 
 -- of the edability of the mushroom
@@ -261,75 +279,13 @@ classification Null = putStrLn ("Prediction: null")
 classification (Leaf attValue) = putStrLn ("Prediction: " ++ if (attValue == "e") then "edible" else "poisonous")
 classification (Node attName childs) = do putStrLn $ "Which " ++ attName ++ "?"
                                           input <- getLine
-                                          let value = find' attName input attributeList
+                                          let value = extend' attName input attributeList
                                           classification (getValue value childs)
      
-                                      
-find :: AttName -> AttValue -> AttList -> String
-find attName attValue list = getValue attValue (getValue attName list)
-                                       
-find' :: AttName -> String -> AttList -> AttValue
-find' attName value list = getValue' value (getValue attName list)
+----------------
+----- MAIN -----
+----------------
 
-
--- ++ unlines(map(showTree(tabs+1))childs)
---showTree :: Int -> DecisionTree -> String
---showTree tabs (Null) = indent tabs ("null")
---showTree tabs (Leaf attValue) = indent tabs (show attValue)
---showTree tabs (Node attName [(value, childs)]) = (indent tabs (show attName)) ++ "\n" ++ indent (tabs+1) (show value) ++ showTree (tabs+1) childs
-
-
-instance Show DecisionTree where
-    show dts = show' 0 dts
-        where
-            show' nvl Null = indent nvl "null"
-            show' nvl (Leaf attValue) = indent nvl (show attValue)
-            --show' nvl (Node attName childs@([(value,_)])) = indent nvl (show attName) ++ "\n" ++ indent (nvl+1) (show value) ++ concatMap (show' (nvl+1)) (map snd childs)
-            --show' nvl (Node attName childs) = indent nvl (show attName) ++ "\n" ++ indent (nvl) (show "attValue") ++ "\n" ++ concatMap (show' (nvl+1)) (map snd childs)
-            show' nvl (Node attName childs) = indent nvl (show attName) ++ "\n" ++ concatMap (show' (nvl+1)) (operate childs)
-            indent n = (replicate n ' '++)
- 
-
-pairToList :: (a, a) -> [a]
-pairToList (x,y) = [x,y]
-
-tuplesToList :: [(a,a)] -> [[a]]
-tuplesToList = map pairToList
-
-flatten :: [[a]] -> [a]
-flatten = foldl (++) []
-
-operate :: [(a,a)] -> [a]
-operate = flatten . tuplesToList
-
---instance Show DecisionTree where
-  --  show Null = show("null")
-  --  show (Leaf attValue) = show(attValue)
-  --  show (Node attName childs) = show(attName) ++ showChilds "" childs
-    --    where 
-       --       showChilds indent childs = concatMap (show' indent)  (operate childs)
-        --      show' indent Null = indent ++ show("null")
-        --      show' indent (Leaf attValue) = indent ++ show (attValue)
-         --     show' indent (Node attName childs) = 
-           --       "\n" ++ indent ++ show(attName) ++ "\n" ++ showChilds ("   " ++ indent) childs 
-
-
-
---unlines(map(showTree(tabs+1))childs)
--- ++ mapM_ putStrLn $ (map (showTree (tabs + 1)) childs)
-
-
---showTree :: Int -> DecisionTree -> String
---showTree tabs (Hoja valor) = indent tabs (show valor)
---showTree tabs (Branch name x) = (indent tabs (show name)) ++ "\n" ++ -- unlines(map(showTree(tabs+1))x) -- Esta opcion usa show, que imprime los salts como \n
---mapM_ putStrLn (map (showTree (tabs + 1)) x) --Esta usa putStrLn, que imprime sin comillas ni nada mas bonito ::: Me podrian quitar puntos por tener la salida integrada en el programa en lugar de tenerla separada
-
--- Para IO -> escribe tantos espacios como le indique el primer parámetro 
---indent :: Int -> String -> String
---indent d = (replicate d ' '++)
-
-
--- MAIN 
 main = do
     contents <- readFile "agaricus-lepiota.data"
     let linesOfFile = lines contents
@@ -337,11 +293,10 @@ main = do
     putStrLn $ "-------------------------------------"
     putStrLn $ "------ RESULTING DECISION TREE ------"
     putStrLn $ "-------------------------------------\n"
-    let tree = buildDecisionTree (attributes,table) edibility nextAtt
+    let tree = buildDecisionTree (attributes,table) edibility nextAtt   -- tree construction
     print $ tree
-    --print $ showTree 0 tree
-    putStrLn $ "\n**Look at the readme to see the resulting tree with more clarity**\n"
+    putStrLn $ "**Look at the readme to see the resulting tree with more clarity**\n"
     putStrLn $ "-------------------------------------"
     putStrLn $ "------ PREDICTION INTERACTION ------"
     putStrLn $ "-------------------------------------\n"
-    classification tree
+    classification tree                                                 -- tree interaction
